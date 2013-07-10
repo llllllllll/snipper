@@ -5,6 +5,7 @@ import Data.List.Split
 import Data.Maybe
 import Control.Monad
 
+-- A Snippet of code.
 data Snip = Snip { title :: String
                  , language :: String
                  , contents :: String
@@ -18,6 +19,7 @@ main = do
   args <- getArgs
   apply args
 
+-- Parses the command line args.
 apply args
   | head args `elem` ["print","search","remove"] = parse_command (head args) $ 
                                           Snip (args !! 1) "" ""
@@ -27,7 +29,7 @@ apply args
   | otherwise = putStrLn "Error: Command not regognized."
 
                                   
-
+-- Parses a String to a command function.
 parse_command :: String -> (Snip -> IO ())
 parse_command str
   | str == "add"    = add_snip
@@ -36,6 +38,7 @@ parse_command str
   | str == "count"  = count_snip
   | str == "remove" = remove_snip
 
+-- Parses the .snips into a list of Snips
 parse_snips :: String -> [Snip]
 parse_snips str = map mk_snip (lines str)
   where
@@ -45,6 +48,7 @@ parse_snips str = map mk_snip (lines str)
            , contents = fromMaybe "" (stripPrefix "Cont: " (fields !! 2))
            }
 
+-- The function to add a Snip to .snips
 add_snip :: Snip -> IO ()
 add_snip s = do
   snips <- liftM parse_snips $ readFile "/home/joejev/.snips" 
@@ -53,22 +57,26 @@ add_snip s = do
     else 
      appendFile "/home/joejev/.snips" $ intercalate "\\" (splitOn "\n" (show s))
 
+-- Prints a Snip to stdout.
 print_snip :: Snip -> IO ()
 print_snip s = do 
   snips <- liftM parse_snips $ readFile "/home/joejev/.snips"
   putStrLn $ show $ fromMaybe (Snip "Snip Not Found" "" "") $ 
     find (\sn -> title s == title sn) snips
 
+-- Prints the titles of snips that have contents that conatain the title s.
 search_snip :: Snip -> IO ()
 search_snip s = do
   snips <- liftM parse_snips $ readFile "/home/joejev/.snips"
   print $ map title $ filter (\sn -> title s `isInfixOf` contents sn) snips 
 
+-- Prints the number of Snips you have saved.
 count_snip :: Snip -> IO ()
 count_snip _ = do
   snips <- liftM parse_snips $ readFile "/home/joejev/.snips"
   print $ length (tail snips)
 
+-- Removes a Snip from the .snips.
 remove_snip :: Snip -> IO ()
 remove_snip s =  do 
   snips <- liftM parse_snips $ readFile "/home/joejev/.snips"
