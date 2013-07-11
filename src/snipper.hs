@@ -1,6 +1,7 @@
 import System.IO
 import System.Environment
 import System.Directory
+import System.Cmd
 import Data.List
 import Data.List.Split
 import Data.Maybe
@@ -35,8 +36,9 @@ save_format s = (intercalate "\\" (splitOn "\n" (show s))) ++ "\n"
 
 -- Parses the command line args.
 apply args
-  | head args `elem` ["print","search","lang","remove"] = parse_command (head args) $ 
-                                                          Snip (args !! 1) "" ""
+  | head args `elem` ["print","search","lang","remove","copy"] = parse_command 
+                                                                 (head args) $ 
+                                                                 Snip (args !! 1) "" ""
   | head args == "add"  = let s = tail args in
   add_snip $ Snip (head s) (s !! 1) (s !! 2) 
   | head args `elem` ["count","list","clear","help","version"] = 
@@ -54,6 +56,7 @@ parse_command str
   | str == "list"    = list_snips
   | str == "remove"  = remove_snip
   | str == "clear"   = clear_snips
+  | str == "copy"    = copy_snip
   | str == "help"    = snipper_help
   | str == "version" = snipper_version
 
@@ -69,10 +72,10 @@ parse_snips str = map mk_snip (lines str)
 
 snipper_help :: Snip -> IO ()
 snipper_help _ = 
-  putStrLn "Commands:\n add <title> <lang> <cont> - adds a Snip with the given \n                             parameters\n print <title> - Returns the Snip with the given title.\n search <fragment> - Returns the title of Snips that\n                     have fragment anywhere in their\n                     contents.\n lang <lang> - Returns a list of all Snips that are of\n               the given language.\n list - Returns the title of every Snip in your library.\n remove title - Removes the give Snip from the library.\n clear - Clears your whole library.\n version - Returns the given version information.\n help - Returns this message."
+  putStrLn "Commands:\n add <title> <lang> <cont> - adds a Snip with the given \n                             parameters\n print <title> - Returns the Snip with the given title.\n search <fragment> - Returns the title of Snips that\n                     have fragment anywhere in their\n                     contents.\n lang <lang> - Returns a list of all Snips that are of\n               the given language.\n list - Returns the title of every Snip in your library.\n remove <title> - Removes the give Snip from the library.\n clear - Clears your whole library.\n copy <title> - copies the contents of the snip to the clipoard.\n version - Returns the given version information.\n help - Returns this message."
 
 snipper_version :: Snip -> IO ()
-snipper_version _ = putStrLn "Snipper by Joe Jevnik\nVersion: 0.1"
+snipper_version _ = putStrLn "Snipper by Joe Jevnik\nVersion: 0.2"
 
 
 -- The function to add a Snip to .snips
@@ -132,6 +135,13 @@ remove_snip s =  do
         mapM hClose [snips_handle, snips_handle']
         removeFile dot_snips
         renameFile dot_snips' dot_snips
+        
+copy_snip :: Snip -> IO ()
+copy_snip s = do 
+  snips <- liftM parse_snips $ readFile dot_snips
+  system $ "echo " ++ (contents $ fromMaybe (Snip "Snip Not Found" "" "") $ 
+    find (\sn -> title s == title sn) snips) ++ " | xclip -selection c" 
+  putStrLn "Copied!"
         
 clear_snips :: Snip -> IO ()
 clear_snips _ = do
