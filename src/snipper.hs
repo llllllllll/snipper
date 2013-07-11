@@ -19,7 +19,8 @@ data Snip = Snip { title :: String
                  } deriving (Eq)
             
 instance Show Snip where
-  show s = "Title: " ++ title s ++ "\nLang: " ++ language s ++ "\nCont: " ++ contents s
+  show s = "Title: " ++ title s ++ "\nLang:  " ++ language s ++ "\nCont:  " 
+           ++ contents s
 
 main :: IO ()
 main = do
@@ -62,8 +63,8 @@ parse_snips str = map mk_snip (lines str)
   where
     mk_snip str = let fields = splitOn "\\" str in
       Snip { title    = fromMaybe "" (stripPrefix "Title: " (head fields))
-           , language = fromMaybe "" (stripPrefix "Lang: " (fields !! 1)) 
-           , contents = fromMaybe "" (stripPrefix "Cont: " (fields !! 2))
+           , language = fromMaybe "" (stripPrefix "Lang:  " (fields !! 1)) 
+           , contents = fromMaybe "" (stripPrefix "Cont:  " (fields !! 2))
            }
 
 snipper_help :: Snip -> IO ()
@@ -89,6 +90,7 @@ print_snip s = do
   snips <- liftM parse_snips $ readFile dot_snips
   putStrLn $ show $ fromMaybe (Snip "Snip Not Found" "" "") $ 
     find (\sn -> title s == title sn) snips
+
 
 -- Prints the titles of snips that have contents that conatain the title s.
 search_cont :: Snip -> IO ()
