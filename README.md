@@ -1,3 +1,4 @@
-Snipper
+snipper
 =======
 A command line utility for saving snippets of code or notes by Joe Jevnik
+Commands:\n add <title> <lang> <cont> - adds a Snip with the given \n                             parameters\n print <title> - Returns the Snip with the given title.\n search <fragment> - Returns the title of Snips that\n                     have fragment anywhere in their\n                     contents.\n lang <lang> - Returns a list of all Snips that are of\n               the given language.\n list - Returns the title of every Snip in your library.\n remove <title> - Removes the give Snip from the library.\n clear - Clears your whole library.\n copy <title> - copies the contents of the snip to the clipoard.\n clip <title> <lang> - Creates a snip with the given title and \n                       lang and pulls the contents from the clipboard.\n eval <title> - Evaluates the Snip if it is a valid function\n version - Returns the given version information.\n help - Returns this message."
