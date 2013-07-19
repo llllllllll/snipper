@@ -1,6 +1,20 @@
 -----------------------------------------------------------------------------
 -- Snipper v0.5
--- By Joe Jevnik
+-- Author: Joe Jevnik
+-- Copyright Joe Jevnik 2013
+
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -----------------------------------------------------------------------------
 
 import System.IO
@@ -23,7 +37,7 @@ io_dot_snips = do
 io_dot_snips' :: IO FilePath
 io_dot_snips' = do
   h <- getHomeDirectory
-  return $h ++ "/.snipper/#.snips'"
+  return $ h ++ "/.snipper/#.snips'"
 
 io_temp_hs :: IO FilePath
 io_temp_hs = do
@@ -80,7 +94,7 @@ apply args
   | head args `elem` ["count","list","clear","help","version"] = 
     parse_command (head args) $ Snip "" "" "" 
   | head args == "clip" = parse_command (head args) $ Snip (args !! 1) (args !! 2) ""
-  | otherwise = putStrLn "Error: Command not regognized."
+  | otherwise = putStrLn "Error: Command not recognized."
 
 -- Parses a String to a command function.
 parse_command :: String -> (Snip -> IO ())
@@ -239,7 +253,8 @@ eval_haskell s = do
   h <- openFile temp_hs WriteMode
   let fixed_conts = 
         let cs = splitOn "=" (contents s) 
-        in "module Main where\n\n" ++ head cs ++  "= print $ " ++ (concat $ tail cs)
+        in "module Main where\nimport Data.List\n" 
+           ++ head cs ++  "= print $ " ++ (concat $ tail cs)
   hPutStrLn h (fixed_conts)
   hClose h
   let func = takeWhile (/=' ') (contents s)
