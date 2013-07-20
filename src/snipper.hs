@@ -1,6 +1,9 @@
 -----------------------------------------------------------------------------
--- Snipper v0.5
+-- Snipper v1.0 (release)
+-- Description: A command line utility for saving code snippets or notes.
 -- Author: Joe Jevnik
+-- Portability: Requires POSIX
+-- Dependencies: xclip for "clip" and "copy" commands
 -- Copyright Joe Jevnik 2013
 
 -- This program is free software: you can redistribute it and/or modify
@@ -24,15 +27,12 @@ import System.Process
 import Data.List
 import Data.List.Split
 import Data.Maybe
-import Data.Functor
-import Control.Applicative
 import Control.Monad
 
 io_dot_snips :: IO FilePath
 io_dot_snips = do
   h <- getHomeDirectory
   return $ h ++ "/.snipper/.snips"
-  
 
 io_dot_snips' :: IO FilePath
 io_dot_snips' = do
@@ -64,7 +64,7 @@ io_temp_proc = do
   h <- getHomeDirectory
   return $ h ++ "/.snipper/#.snips"
 
--- A Snippet of code.
+-- A Snippet of code or text.
 data Snip = Snip { title :: String
                  , language :: String
                  , contents :: String
@@ -87,13 +87,15 @@ save_format s = (intercalate "¶" (splitOn "\n" (show s))) ++ "\n"
 
 -- Parses the command line args.
 apply args
-  | head args `elem` ["print","search","lang","remove","copy","eval"] = 
+  | head args `elem` 
+    ["print","search","lang","remove","copy","eval"] = 
     parse_command (head args) $ Snip (args !! 1) "" ""
-  | head args == "add"  = let s = tail args in
-  add_snip $ Snip (head s) (s !! 1) (s !! 2) 
+  | head args `elem` ["add","edit"]  = let s = tail args in
+  parse_command (head args) $ Snip (head s) (s !! 1) (s !! 2) 
   | head args `elem` ["count","list","clear","help","version"] = 
     parse_command (head args) $ Snip "" "" "" 
-  | head args == "clip" = parse_command (head args) $ Snip (args !! 1) (args !! 2) ""
+  | head args == "clip" = parse_command (head args) $ 
+                          Snip (args !! 1) (args !! 2) ""
   | otherwise = putStrLn "Error: Command not recognized."
 
 -- Parses a String to a command function.
@@ -110,6 +112,7 @@ parse_command str
   | str == "copy"    = copy_snip
   | str == "eval"    = eval_snip
   | str == "clip"    = from_clip
+  | str == "edit"    = edit_snip
   | str == "help"    = snipper_help
   | str == "version" = snipper_version
 
@@ -122,16 +125,15 @@ parse_snips str = map mk_snip (lines str)
            , language = fromMaybe "" (stripPrefix "Lang:  " (fields !! 1)) 
            , contents = fromMaybe "" (stripPrefix "Cont:  " 
                                       (concat $ intersperse "\n" 
-                                       $  tail $ tail fields))
+                                       $ tail $ tail fields))
            }
 
 snipper_help :: Snip -> IO ()
 snipper_help _ = 
-  putStrLn "Commands:\n add <title> <lang> <cont> - adds a Snip with the given \n                             parameters\n print <title> - Returns the Snip with the given title.\n search <fragment> - Returns the title of Snips that\n                     have fragment anywhere in their\n                     contents.\n lang <lang> - Returns a list of all Snips that are of\n               the given language.\n list - Returns the title of every Snip in your library.\n remove <title> - Removes the give Snip from the library.\n clear - Clears your whole library.\n copy <title> - copies the contents of the snip to the clipoard.\n clip <title> <lang> - Creates a snip with the given title and \n                       lang and pulls the contents from the clipboard.\n eval <title> - Evaluates the Snip if it is a valid function\n version - Returns the given version information.\n help - Prints this message."
+  putStrLn "COMMANDS:\nadd <title> <lang> <cont> - Adds a Snip with the given parameters.\nclip <title> <lang> - Works like add, but <cont> is taken from\n                      the clipboard.\nremove <title> - Removes the given Snip.\nedit <title> <lang> <cont> - Edits the given Snip to \nhave the new parameters.\nprint <title> - Prints the given Snip.\ncopy <title> - Copies the contents of the given Snip to\n               the clipboard.\nsearch <cont>  - Prints a list of Snip titles that have <cont>\n                 somewhere in their contents.\nlang <lang> - Prints a list of Snip titles that are of\n              language <lang>\nlist - Prints the title of all Snips you have saved.\neval <title> - Attempts to evaluate the given snip if it is a\n               parameterless function. Currently only supports\n               haskell and c. WARNING - this feature is buggy.\nclear - Resets your Snip library.\nhelp - Prints this message.\nversion - Prints the version information."
 
 snipper_version :: Snip -> IO ()
-snipper_version _ = putStrLn "Snipper by Joe Jevnik\nVersion: 0.5"
-
+snipper_version _ = putStrLn "Snipper by Joe Jevnik\nVersion: 1.0 (release)"
 
 -- The function to add a Snip to .snips
 add_snip :: Snip -> IO ()
@@ -139,12 +141,12 @@ add_snip s = do
   dot_snips <- io_dot_snips
   snips <- liftM parse_snips $ readFile dot_snips
   if any (==title s) (map title snips) 
-    then do  
-    putStrLn $ title s ++ " is already in use, use \"snipper remove " ++ title s 
-      ++ "\" to free the name"
-    else 
-     appendFile dot_snips $ save_format s
-
+    then putStrLn $ title s ++ 
+         " is already in use!\nUse \"snipper remove " ++ title s 
+         ++ "\" to free the name."
+    else appendFile dot_snips (save_format s) >> 
+         (putStrLn $ title s ++ " added!")
+  
 -- Prints a Snip to stdout.
 print_snip :: Snip -> IO ()
 print_snip s = do 
@@ -154,21 +156,28 @@ print_snip s = do
     find (\sn -> title s == title sn) snips
 
 
--- Prints the titles of snips that have contents that conatain the title s.
+-- Prints the titles of Snips that have contents that conatain the title s.
 search_cont :: Snip -> IO ()
 search_cont s = do
   dot_snips <- io_dot_snips
   snips <- liftM parse_snips $ readFile dot_snips
-  putStr $ concatMap (\sn -> title sn ++ "\n") $ 
-    filter (\sn -> title s `isInfixOf` contents sn) snips
+  let str = concatMap (\sn -> title sn ++ "\n") $ 
+            filter (\sn -> title s `isInfixOf` contents sn) snips
+  if null str 
+    then putStrLn "No Snips match your search!"
+    else putStr str
 
+-- Prints the titles of Snips that are of language lang s
 search_lang :: Snip -> IO ()
 search_lang s = do
   dot_snips <- io_dot_snips
   snips <- liftM parse_snips $ readFile dot_snips
-  putStr $ concatMap (\sn -> title sn ++ "\n") $ 
-    filter (\sn -> language sn == title s) snips 
-
+  let str = concatMap (\sn -> title sn ++ "\n") $ 
+            filter (\sn -> language sn == title s) snips 
+  if null str
+    then putStrLn "No Snips match your search!"
+    else putStr str
+  
 -- Prints the number of Snips you have saved.
 count_snips :: Snip -> IO ()
 count_snips _ = do
@@ -176,11 +185,15 @@ count_snips _ = do
   snips <- liftM parse_snips $ readFile dot_snips
   print $ length snips
 
+-- Prints the titles of all the Snips
 list_snips :: Snip -> IO ()
 list_snips _ = do
   dot_snips <- io_dot_snips
   snips <- liftM parse_snips $ readFile dot_snips
-  putStr $ concatMap (\s -> title s ++ "\n") snips
+  let str = concatMap (\s -> title s ++ "\n") snips
+  if null str
+    then putStrLn "No Snips found! Use snipper add <title> <lang> <cont> to add some!"
+    else putStr str 
 
 -- Removes a Snip from the .snips.
 remove_snip :: Snip -> IO ()
@@ -189,8 +202,11 @@ remove_snip s =  do
   snips_handle <- openFile dot_snips ReadWriteMode
   snips <- liftM parse_snips $ hGetContents snips_handle
   if any (==title s) (map title snips) 
-    then remove_snip snips_handle snips
-    else putStrLn $ title s ++ " is not already in use"
+    then 
+    remove_snip snips_handle snips >>
+    (putStrLn $ title s ++ " removed!")
+    else 
+    putStrLn $ title s ++ " is not already in use"
     where
       remove_snip snips_handle snips = do
         dot_snips' <- io_dot_snips'
@@ -202,24 +218,29 @@ remove_snip s =  do
         removeFile dot_snips
         renameFile dot_snips' dot_snips
         
+-- Puts the contents of s into the clipboard.
 copy_snip :: Snip -> IO ()
 copy_snip s = do 
   dot_snips <- io_dot_snips
   snips <- liftM parse_snips $ readFile dot_snips
   system $ "echo \"" ++ (contents $ fromMaybe (Snip "Snip Not Found" "" "") $ 
     find (\sn -> title s == title sn) snips) ++ "\" | xclip -selection c" 
-  putStrLn "Copied!"
+  putStrLn $ title s ++ " copied!"
         
+-- Adds a Snip with the contents pulled from the clipboard.
 from_clip :: Snip -> IO ()
 from_clip s = do
   dot_snips <- io_dot_snips
   snips <- liftM parse_snips $ readFile dot_snips
   snip_cont <- readProcess "xclip" ["-o"] []
   if any (==title s) (map title snips) 
-    then putStrLn $ title s ++ " is already in use (use remove to clear the title)"
+    then putStrLn $ title s 
+         ++ " is already in use (use remove to clear the title)"
     else 
-     appendFile dot_snips $ save_format $ Snip (title s) (language s) (snip_cont)
+     putStrLn (title s ++ " added!") >> (appendFile dot_snips $ save_format $ 
+                                         Snip (title s) (language s) (snip_cont))
 
+-- Resets your .snips file.
 clear_snips :: Snip -> IO ()
 clear_snips _ = do
   dot_snips <- io_dot_snips
@@ -228,22 +249,44 @@ clear_snips _ = do
   putStrLn "Are you sure you want to clear your Snips library? (y/n):"
   inp <- getChar
   hSetBuffering stdin orig_b
-  when (inp == 'y') $ openFile dot_snips WriteMode >>= hClose
+  when (inp == 'y') $ openFile dot_snips WriteMode >>= hClose >> 
+    putStrLn "Cleared!"
   
-
+-- Edits a Snip to match s or adds a new one.
+edit_snip :: Snip -> IO ()
+edit_snip s = do
+  dot_snips <- io_dot_snips
+  snips_handle <- openFile dot_snips ReadWriteMode
+  snips <- liftM parse_snips $ hGetContents snips_handle
+  if any (==title s) (map title snips) 
+    then remove_snip snips_handle snips >> add_snip s
+    else add_snip s
+    where
+      remove_snip snips_handle snips = do
+        dot_snips' <- io_dot_snips'
+        dot_snips <- io_dot_snips
+        snips_handle' <- openFile dot_snips' ReadWriteMode     
+        mapM (hPutStr snips_handle' . save_format) 
+          (filter (\sn -> title sn /= title s) snips)
+        mapM hClose [snips_handle, snips_handle']
+        removeFile dot_snips
+        renameFile dot_snips' dot_snips
+  
+-- Attempts to compile and run the given snip.
 eval_snip :: Snip -> IO ()
 eval_snip s = do
   dot_snips <- io_dot_snips
   snips <- liftM parse_snips $ readFile dot_snips
-  exec_snip' $ fromMaybe (Snip "Snip Not Found" "" "") $ 
+  eval_snip' $ fromMaybe (Snip "Snip Not Found" "" "") $ 
     find (\sn -> title s == title sn) snips
   where
-    exec_snip' sn
+    eval_snip' sn
       | title sn == "Snip Not Found" = putStrLn "Snip Not Found"
       | language sn == "haskell"     = eval_haskell sn
       | language sn == "c"           = eval_c sn
       | otherwise = putStrLn "Language not yet supported."
 
+-- Imports Date.List
 eval_haskell :: Snip -> IO ()
 eval_haskell s = do
   temp_hs <- io_temp_hs
@@ -261,7 +304,8 @@ eval_haskell s = do
   system $ "ghc -main-is " ++ func ++ " --make " ++ temp_hs
   readProcess temp_proc [] [] >>= putStr
   mapM_ removeFile [temp_hs,temp_hi,temp_o,temp_proc] >> putStr ""
-  
+
+-- Includes stdio.h
 eval_c :: Snip -> IO ()
 eval_c s = do
   temp_c <- io_temp_c
