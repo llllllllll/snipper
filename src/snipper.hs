@@ -1,9 +1,8 @@
 -----------------------------------------------------------------------------
--- Snipper v1.0 (release)
+-- Snipper v1.1
 -- Description: A command line utility for saving code snippets or notes.
 -- Author: Joe Jevnik
--- Portability: Requires POSIX
--- Dependencies: xclip for "clip" and "copy" commands
+-- Dependencies: xclip for "clip" and "cp" commands
 -- Copyright Joe Jevnik 2013
 
 -- This program is free software: you can redistribute it and/or modify
@@ -27,38 +26,48 @@ import System.Process
 import Data.List
 import Data.List.Split
 import Data.Maybe
+import Control.Applicative
 import Control.Monad
+import Text.Regex.Base.RegexLike
+import Text.Regex.TDFA
 
+-- Snip library,
 io_dot_snips :: IO FilePath
 io_dot_snips = do
   h <- getHomeDirectory
   return $ h ++ "/.snipper/.snips"
 
+-- Temp Snip libary for editing.
 io_dot_snips' :: IO FilePath
 io_dot_snips' = do
   h <- getHomeDirectory
   return $ h ++ "/.snipper/#.snips'"
 
+-- Temp haskell source file for eval haskell.
 io_temp_hs :: IO FilePath
 io_temp_hs = do
   h <- getHomeDirectory
   return $ h ++ "/.snipper/#.snips.hs"
 
+-- Temp object file for eval haskell.
 io_temp_o :: IO FilePath
 io_temp_o = do
   h <- getHomeDirectory
   return $ h ++ "/.snipper/#.snips.o"
 
+-- Temp interface file for eval haskell.
 io_temp_hi :: IO FilePath
 io_temp_hi = do
   h <- getHomeDirectory
   return $ h ++ "/.snipper/#.snips.hi"
 
+-- Temp c source file for eval c/c++
 io_temp_c :: IO FilePath
 io_temp_c = do
   h <- getHomeDirectory
   return $ h ++ "/.snipper/#.snips.c"
 
+-- Temp binary file for eval.
 io_temp_proc :: IO FilePath
 io_temp_proc = do
   h <- getHomeDirectory
@@ -70,6 +79,7 @@ data Snip = Snip { title :: String
                  , contents :: String
                  } deriving (Eq)
             
+-- The output for print, and is modified for saveing.
 instance Show Snip where
   show s = "Title: " ++ title s ++ "\nLang:  " ++ language s ++ "\nCont:  " 
            ++ contents s
@@ -88,11 +98,11 @@ save_format s = (intercalate "¶" (splitOn "\n" (show s))) ++ "\n"
 -- Parses the command line args.
 apply args
   | head args `elem` 
-    ["print","search","lang","remove","copy","eval"] = 
+    ["print","search","lang","rm","cp","eval","regex","regexl","regext"] = 
     parse_command (head args) $ Snip (args !! 1) "" ""
-  | head args `elem` ["add","edit"]  = let s = tail args in
-  parse_command (head args) $ Snip (head s) (s !! 1) (s !! 2) 
-  | head args `elem` ["count","list","clear","help","version"] = 
+  | head args `elem` ["mk","edit"] = let s = tail args in
+    parse_command (head args) $ Snip (head s) (s !! 1) (s !! 2) 
+  | head args `elem` ["count","ls","cl","help","version"] = 
     parse_command (head args) $ Snip "" "" "" 
   | head args == "clip" = parse_command (head args) $ 
                           Snip (args !! 1) (args !! 2) ""
@@ -101,15 +111,18 @@ apply args
 -- Parses a String to a command function.
 parse_command :: String -> (Snip -> IO ())
 parse_command str
-  | str == "add"     = add_snip
+  | str == "mk"      = add_snip
   | str == "print"   = print_snip
-  | str == "search"  = search_cont
-  | str == "lang"    = search_lang
+  | str == "cont"    = search_cont
+  | str == "search"  = regex_cont
+  | str == "searcht" = regex_title
+  | str == "lang"    = regex_lang
+  | str == "searchl" = search_lang
   | str == "count"   = count_snips
-  | str == "list"    = list_snips
-  | str == "remove"  = remove_snip
-  | str == "clear"   = clear_snips
-  | str == "copy"    = copy_snip
+  | str == "ls"      = list_snips
+  | str == "rm"      = remove_snip
+  | str == "cl"      = clear_snips
+  | str == "cp"      = copy_snip
   | str == "eval"    = eval_snip
   | str == "clip"    = from_clip
   | str == "edit"    = edit_snip
@@ -130,10 +143,10 @@ parse_snips str = map mk_snip (lines str)
 
 snipper_help :: Snip -> IO ()
 snipper_help _ = 
-  putStrLn "COMMANDS:\nadd <title> <lang> <cont> - Adds a Snip with the given parameters.\nclip <title> <lang> - Works like add, but <cont> is taken from\n                      the clipboard.\nremove <title> - Removes the given Snip.\nedit <title> <lang> <cont> - Edits the given Snip to \nhave the new parameters.\nprint <title> - Prints the given Snip.\ncopy <title> - Copies the contents of the given Snip to\n               the clipboard.\nsearch <cont>  - Prints a list of Snip titles that have <cont>\n                 somewhere in their contents.\nlang <lang> - Prints a list of Snip titles that are of\n              language <lang>\nlist - Prints the title of all Snips you have saved.\neval <title> - Attempts to evaluate the given snip if it is a\n               parameterless function. Currently only supports\n               haskell and c. WARNING - this feature is buggy.\nclear - Resets your Snip library.\nhelp - Prints this message.\nversion - Prints the version information."
+  putStrLn "COMMANDS:\nmk <title> <lang> <cont> - Adds a Snip with the given parameters.\nclip <title> <lang> - Works like mk, but <cont> is taken from\n                      the clipboard.\nrm <title> - Removes the given Snip.\nedit <title> <lang> <cont> - Edits the given Snip to \n                             have the new parameters.\nprint <title> - Prints the given Snip.\ncp <title> - Copies the contents of the given Snip to\n             the clipboard.\nsearch <cont>  - Prints a list of Snip titles that have <cont>\n                 somewhere in their contents.\nlang <lang> - Prints a list of Snip titles that are of\n              language <lang>\nls - Prints the title of all Snips you have saved.\neval <title> - Attempts to evaluate the given snip if it is a\n               parameterless function. Currently only supports\n               haskell and c/c++. WARNING: this feature is buggy.\ncl - Resets your Snip library.\nhelp - Prints this message.\nversion - Prints the version information."
 
 snipper_version :: Snip -> IO ()
-snipper_version _ = putStrLn "Snipper by Joe Jevnik\nVersion: 1.0 (release)"
+snipper_version _ = putStrLn "Snipper by Joe Jevnik\nVersion: v1.1"
 
 -- The function to add a Snip to .snips
 add_snip :: Snip -> IO ()
@@ -167,6 +180,17 @@ search_cont s = do
     then putStrLn "No Snips match your search!"
     else putStr str
 
+-- Prints the titles of the Snips that have contents that match regex title s.
+regex_cont :: Snip -> IO ()
+regex_cont s = do
+    dot_snips <- io_dot_snips
+    snips <- parse_snips <$> readFile dot_snips
+    let str = concatMap (\sn -> title sn ++ "\n") $ 
+              filter (\sn -> contents sn =~ title s :: Bool) snips 
+    if null str
+       then putStrLn "No Snips match your search!"
+       else putStr str
+
 -- Prints the titles of Snips that are of language lang s
 search_lang :: Snip -> IO ()
 search_lang s = do
@@ -177,6 +201,17 @@ search_lang s = do
   if null str
     then putStrLn "No Snips match your search!"
     else putStr str
+
+-- Prints the titles of the Snips that have lang that match regex title s.
+regex_lang :: Snip -> IO ()
+regex_lang s = do
+    dot_snips <- io_dot_snips
+    snips <- parse_snips <$> readFile dot_snips
+    let str = concatMap (\sn -> title sn ++ "\n") $ 
+              filter (\sn -> language sn =~ title s :: Bool) snips 
+    if null str
+       then putStrLn "No Snips match your search!"
+       else putStr str
   
 -- Prints the number of Snips you have saved.
 count_snips :: Snip -> IO ()
@@ -193,7 +228,18 @@ list_snips _ = do
   let str = concatMap (\s -> title s ++ "\n") snips
   if null str
     then putStrLn "No Snips found! Use snipper add <title> <lang> <cont> to add some!"
-    else putStr str 
+    else putStr str
+
+-- Prints the titles of the Snips that have titles that match regex title s.
+regex_title :: Snip -> IO ()
+regex_title s = do
+    dot_snips <- io_dot_snips
+    snips <- parse_snips <$> readFile dot_snips
+    let str = concatMap (\sn -> title sn ++ "\n") $ 
+              filter (\sn -> title sn =~ title s :: Bool) snips 
+    if null str
+       then putStrLn "No Snips match your search!"
+       else putStr str
 
 -- Removes a Snip from the .snips.
 remove_snip :: Snip -> IO ()
@@ -246,7 +292,7 @@ clear_snips _ = do
   dot_snips <- io_dot_snips
   orig_b <- hGetBuffering stdin
   hSetBuffering stdin LineBuffering
-  putStrLn "Are you sure you want to clear your Snips library? (y/n):"
+  putStrLn "Are you sure you want to clear your Snips library? (y/N):"
   inp <- getChar
   hSetBuffering stdin orig_b
   when (inp == 'y') $ openFile dot_snips WriteMode >>= hClose >> 
@@ -281,12 +327,12 @@ eval_snip s = do
     find (\sn -> title s == title sn) snips
   where
     eval_snip' sn
-      | title sn == "Snip Not Found" = putStrLn "Snip Not Found"
-      | language sn == "haskell"     = eval_haskell sn
-      | language sn == "c"           = eval_c sn
+      | title sn == "Snip Not Found"             = putStrLn "Snip Not Found"
+      | language sn `elem` ["haskell","Haskell"] = eval_haskell sn
+      | language sn `elem` ["c","C","c++","C++"] = eval_c sn
       | otherwise = putStrLn "Language not yet supported."
 
--- Imports Date.List
+-- Imports Data.List
 eval_haskell :: Snip -> IO ()
 eval_haskell s = do
   temp_hs <- io_temp_hs
@@ -316,7 +362,7 @@ eval_c s = do
     fixed_conts = 
         let cs = splitOn "=" (contents s) 
         in "#include<stdio.h>\n\nint main(){ printf(\"%i\"," 
-           ++ func ++ ");\nreturn 0; }\n\n" ++ contents s  
+           ++ func ++ ");\nprintf(\"\\n\");\nreturn 0; }\n\n" ++ contents s  
   hPutStrLn h (fixed_conts)
   hClose h
   system $ "gcc " ++ temp_c ++ " -o" ++ temp_proc ++ " -lm"

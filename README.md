@@ -1,11 +1,9 @@
 snipper
 =======
------------------------------------------------------------------------------
--- Snipper v1.0 (release)
+-- Snipper v1.1
 -- Description: A command line utility for saving code snippets or notes.
 -- Author: Joe Jevnik
--- Portability: Requires POSIX
--- Dependencies: xclip for "clip" and "copy" commands
+-- Dependencies: xclip for "clip" and "cp" commands
 -- Copyright Joe Jevnik 2013
 
 -- This program is free software: you can redistribute it and/or modify
@@ -20,26 +18,32 @@ snipper
 
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
------------------------------------------------------------------------------
 
-========
 Commands:
-=========
-Commands:
- add <title> <lang> <cont> - adds a Snip with the given 
-                             parameters
- print <title> - Returns the Snip with the given title.
- search <fragment> - Returns the title of Snips that
-                     have fragment anywhere in their
-                     contents.
- lang <lang> - Returns a list of all Snips that are of
-               the given language.
- list - Returns the title of every Snip in your library.
- remove <title> - Removes the give Snip from the library.
- clear - Clears your whole library.
- copy <title> - copies the contents of the snip to the clipoard.
- clip <title> <lang> - Creates a snip with the given title and 
-                       lang and pulls the contents from the clipboard.
- eval <title> - Evaluates the Snip if it is a valid function
- version - Returns the given version information.
- help - Prints this message.
+--------
+
+- add "<title>" <lang> <cont> - adds a Snip with the given 
+                             parameters .
+- print <title> - Returns the Snip with the given title. 
+- search <fragment> - Returns the title of Snips that 
+                     have fragment anywhere in their 
+                     contents. 
+- lang <lang> - Returns a list of all Snips that are of 
+               the given language. 
+- list - Returns the title of every Snip in your library. 
+- remove <title> - Removes the give Snip from the library. 
+- clear - Clears your whole library. 
+- copy <title> - copies the contents of the snip to the clipoard. 
+- clip <title> <lang> - Creates a snip with the given title and 
+                       lang and pulls the contents from the clipboard. 
+- eval <title> - Evaluates the Snip if it is a valid function
+- version - Returns the given version information. 
+- help - Prints this message. 
+
+TOD:
+----
+
+- Fix help menu
+- Add an edit from clipboard
+- Fix readme
+- Add more features as I see fit
