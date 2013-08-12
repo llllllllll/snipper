@@ -22,7 +22,7 @@ snipper
 Commands:
 --------
 
-- add "<title>" <lang> <cont> - adds a Snip with the given 
+- add <title> <lang> <cont> - adds a Snip with the given 
                              parameters .
 - print <title> - Returns the Snip with the given title. 
 - search <fragment> - Returns the title of Snips that 
@@ -40,7 +40,7 @@ Commands:
 - version - Returns the given version information. 
 - help - Prints this message. 
 
-TOD:
+TODO:
 ----
 
 - Fix help menu
