@@ -161,8 +161,7 @@ add_snip s = do
       then putStrLn $ title s ++ 
                " is already in use!\nUse \"snipper remove " ++ title s 
                ++ "\" to free the name."
-      else appendFile dot_snips (save_format s) >> 
-               (putStrLn $ title s ++ " added!")
+      else appendFile dot_snips (save_format s)
   
 -- Prints a Snip to stdout.
 print_snip :: Snip -> IO ()
@@ -274,8 +273,8 @@ copy_snip s = do
     snips <- liftM parse_snips $ readFile dot_snips
     system $ "echo " ++ (contents $ fromMaybe (Snip "Snip Not Found" "" "") $
                          find (\sn -> title s == title sn) snips) 
-               ++ " | xclip -selection c" 
-    putStrLn $ title s ++ " copied!"
+               ++ " | xclip -selection c"
+    return ()
         
 -- Adds a Snip with the contents pulled from the clipboard.
 from_clip :: Snip -> IO ()
@@ -287,9 +286,8 @@ from_clip s = do
       then putStrLn $ title s 
                ++ " is already in use (use rm to clear the title)"
       else 
-          putStrLn (title s ++ " added!") >> 
-              (appendFile dot_snips $ save_format $ 
-                          Snip (title s) (language s) (snip_cont))
+          appendFile dot_snips $ save_format $ 
+              Snip (title s) (language s) (snip_cont)
 
 -- Resets your .snips file.
 clear_snips :: Snip -> IO ()
@@ -297,11 +295,11 @@ clear_snips _ = do
     dot_snips <- io_dot_snips
     orig_b <- hGetBuffering stdin
     hSetBuffering stdin LineBuffering
-    putStrLn "Are you sure you want to clear your Snips library? (y/N):"
+    putStr "Are you sure you want to clear your Snips library? (y/N):"
+    hFlush stdout
     inp <- getChar
     hSetBuffering stdin orig_b
-    when (inp == 'y') $ openFile dot_snips WriteMode >>= hClose >> 
-         putStrLn "Cleared!"
+    when (inp == 'y') $ openFile dot_snips WriteMode >>= hClose
   
 -- Edits a Snip to match s or adds a new one.
 edit_snip :: Snip -> IO ()
