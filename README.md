@@ -1,49 +1,55 @@
 snipper
 =======
--- Snipper v1.1
--- Description: A command line utility for saving code snippets or notes.
--- Author: Joe Jevnik
--- Dependencies: xclip for "clip" and "cp" commands
--- Copyright Joe Jevnik 2013
+Module      :  Snipper
+Copyright   :  Joe Jevnik 2013
+License     :  GPL v3
 
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
+Maintainer  :  Joe Jevnik
+Stability   :  experimental
+Portability :  requires xclip
 
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
+A command line utility for saving, searching for, and recalling
+snippets of code or text.
 
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/".
 
 Commands:
 --------
 
-- add <title> <lang> <cont> - adds a Snip with the given 
-                             parameters .
-- print <title> - Returns the Snip with the given title. 
-- search <fragment> - Returns the title of Snips that 
-                     have fragment anywhere in their 
-                     contents. 
-- lang <lang> - Returns a list of all Snips that are of 
-               the given language. 
-- list - Returns the title of every Snip in your library. 
-- remove <title> - Removes the give Snip from the library. 
-- clear - Clears your whole library. 
-- copy <title> - copies the contents of the snip to the clipoard. 
-- clip <title> <lang> - Creates a snip with the given title and 
-                       lang and pulls the contents from the clipboard. 
-- eval <title> - Evaluates the Snip if it is a valid function
-- version - Returns the given version information. 
-- help - Prints this message. 
+-  mk "title" "lang" "cont" - Adds a Snip with the given parameters.
+-  clip "title" "lang" - Works like mk, but "cont" is taken from
+                        the clipboard.
+-  rm "title" - Removes the given Snip.
+-  edit "title" "lang" "cont" - Edits the given Snip to
+                               have the new parameters.
+-  print "title" - Prints the given Snip.
+-  cp "title" - Copies the contents of the given Snip to
+               the clipboard.
+-  search "cont"  - Prints a list of Snip titles that have "cont"
+                   somewhere in their contents.
+-  lang "lang" - Prints a list of Snip titles that are of
+                language "lang"
+-  ls - Prints the title of all Snips you have saved.
+-  eval "title" - Attempts to evaluate the given snip if it is a
+                 parameterless function. Currently only supports
+                 haskell and c/c++. WARNING: this feature is deprecated.
+-  cl - Resets your Snip library.\nhelp - Prints this message.
+-  version - Prints the version information.
 
 TODO:
 ----
 
-- Fix help menu
 - Add an edit from clipboard
 - Fix readme
 - Add more features as I see fit
