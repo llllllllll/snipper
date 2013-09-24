@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Joe Jevnik
+# 24.9.2013
+
+if [ ! -d "$HOME/.snipper" ]; then
+    mkdir "$HOME/.snipper"
+fi
+if [ ! -f "$HOME/.snipper/.snips" ]; then
+    touch "$HOME/.snipper/.snips"
+fi

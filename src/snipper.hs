@@ -249,8 +249,7 @@ remove_snip s =  do
     snips_handle <- openFile dot_snips ReadWriteMode
     snips <- liftM parse_snips $ hGetContents snips_handle
     if any (==title s) (map title snips) 
-      then remove_snip snips_handle snips >>
-                 (putStrLn $ title s ++ " removed!")
+      then remove_snip snips_handle snips
       else putStrLn $ title s ++ " is not already in use"
   where
       remove_snip snips_handle snips = do
